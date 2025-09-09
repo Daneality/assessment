@@ -6,6 +6,7 @@ const path = require('path');
 const itemsRouter = require('./routes/items');
 const statsRouter = require('./routes/stats');
 const { initRuntimeConfig } = require('./config/runtimeConfig');
+const { ethers } = require('ethers');
 require('dotenv').config();
 
 const app = express();
@@ -21,25 +22,77 @@ app.use('/api/items', itemsRouter);
 app.use('/api/stats', statsRouter);
 
 /**
- * @route    [HTTP_METHOD] /api/endpoint
- * @desc     [Short summary of what this endpoint does, e.g., Reads or sets value in smart contract]
- * @author   [Your Name]
- * @access   [public/private/auth-required]
- * @param    {Request}  req  - Express request object. [Describe relevant body/query/params fields]
- * @param    {Response} res  - Express response object.
- * @returns  {JSON}          [Describe the JSON structure returned]
- * @throws   [Error conditions, e.g., 400 on invalid input, 500 on contract failure]
+ * @route    GET /api/DanyilApiTest
+ * @desc     Fetch Chainlink ETH/USD price from mainnet AggregatorV3
+ * @author   Danyil Sas
+ * @access   public
+ * @param    {Request}  req - Express request
+ * @param    {Response} res - Express response
+ * @returns  {JSON}     { ok: boolean, data?: { description, decimals, price, roundId, answeredInRound, startedAt, updatedAt, contract }, error?: string }
+ * @throws   500 on provider/contract call failures
  *
  * @example
- * // Example request
- * curl -X POST http://localhost:3001/contract/value -H "Content-Type: application/json" -d '{"value": 42}'
+ * // Request
+ * curl -X GET http://localhost:{PORT}/api/DanyilApiTest
  *
- * // Example response
+ * // Response (example)
  * {
- *   "message": "Value updated",
- *   "txHash": "0x..."
+ *   "ok": true,
+ *   "data": {
+ *     "description": "ETH / USD",
+ *     "decimals": 8,
+ *     "price": 3500.12,
+ *     "roundId": "123456789",
+ *     "answeredInRound": "123456789",
+ *     "startedAt": "2025-09-09T11:59:30.000Z",
+ *     "updatedAt": "2025-09-09T12:00:00.000Z",
+ *     "contract": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419"
+ *   }
  * }
  */
+app.get('/api/DanyilApiTest', async (req, res) => {
+    // consts
+    const rpcUrl = 'https://ethereum.publicnode.com';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    // Chainlink ETH/USD AggregatorV3 on Ethereum mainnet
+    const feedAddress = '0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419';
+    const feedAbi = [
+        'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
+        'function decimals() view returns (uint8)',
+        'function description() view returns (string)'
+    ];
+    try {
+        const feed = new ethers.Contract(feedAddress, feedAbi, provider);
+        const [decimals, description, latest] = await Promise.all([
+            feed.decimals(),
+            feed.description(),
+            feed.latestRoundData()
+        ]);
+
+        const [roundId, answer, startedAt, updatedAt, answeredInRound] = latest;
+
+        const data = {
+            description,
+            decimals: Number(decimals),
+            price: Number(ethers.formatUnits(answer, Number(decimals))),
+            roundId: roundId.toString(),
+            answeredInRound: answeredInRound.toString(),
+            startedAt: new Date(Number(startedAt) * 1000).toISOString(),
+            updatedAt: new Date(Number(updatedAt) * 1000).toISOString(),
+            contract: feedAddress
+        };
+
+        console.log('[DanyilApiTest] Feed data:', data);
+        return res.json({ ok: true, data });
+    } catch (error) {
+        const message = (error && (error.shortMessage || (error.info && error.info.error && error.info.error.message) || error.reason || error.message)) || 'Unknown error';
+        const code = (error && error.code) || 'UNEXPECTED_ERROR';
+        const isNetworkIssue = code === 'NETWORK_ERROR' || message.toLowerCase().includes('network');
+        const status = isNetworkIssue ? 502 : 500;
+        console.error('[DanyilApiTest] Error fetching feed data:', { code, message, rpcUrl, contract: feedAddress });
+        return res.status(status).json({ ok: false, error: message, details: { code, contract: feedAddress, rpcUrl } });
+    }
+});
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
