@@ -48,7 +48,7 @@ function getChainlinkFeedContract(provider, feedAddress) {
  *
  * @example
  * // Request
- * curl -X GET http://localhost:{PORT}/api/DanyilApiTest
+ * curl -s GET http://localhost:{PORT}/api/DanyilApiTest | jq -C .
  *
  * // Response (example)
  * {

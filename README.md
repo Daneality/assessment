@@ -1,5 +1,9 @@
 # Assessment
 
+## Result screenshot
+
+![Result screenshot](resources/result_screenshot.png)
+
 ## 📝 Objective
 
 The goal of this assessment is to evaluate your ability to:
