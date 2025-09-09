@@ -4,6 +4,16 @@
 
 ![Result screenshot](resources/result_screenshot.png)
 
+## Description
+
+The endpoint `/api/DanyilApiTest` fetches the latest ETH/USD price from the Chainlink aggregator smart contract.
+
+Example call (pretty-printed):
+
+```bash
+curl -s http://localhost:{PORT}/api/DanyilApiTest | jq -C .
+```
+
 ## 📝 Objective
 
 The goal of this assessment is to evaluate your ability to:

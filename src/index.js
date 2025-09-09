@@ -38,7 +38,7 @@ function getChainlinkFeedContract(provider, feedAddress) {
 
 /**
  * @route    GET /api/DanyilApiTest
- * @desc     Fetch Chainlink ETH/USD price from mainnet AggregatorV3
+ * @desc     Fetch the latest ETH/USD price from the Chainlink AggregatorV3 feed on Ethereum mainnet.
  * @author   Danyil Sas
  * @access   public
  * @param    {Request}  req - Express request
@@ -48,7 +48,9 @@ function getChainlinkFeedContract(provider, feedAddress) {
  *
  * @example
  * // Request
- * curl -s GET http://localhost:{PORT}/api/DanyilApiTest | jq -C .
+ * curl -s http://localhost:{PORT}/api/DanyilApiTest | jq -C .
+ * // or only the data payload
+ * curl -s http://localhost:{PORT}/api/DanyilApiTest | jq -C .data
  *
  * // Response (example)
  * {
@@ -68,7 +70,8 @@ function getChainlinkFeedContract(provider, feedAddress) {
 app.get('/api/DanyilApiTest', async (req, res) => {
     // Chainlink ETH/USD AggregatorV3 on Ethereum mainnet
     const feedAddress = '0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419';
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum.publicnode.com');
+    const rpcUrl = process.env.RPC_URL || 'https://ethereum.publicnode.com';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     try {
         const feed = getChainlinkFeedContract(provider, feedAddress);
         const [decimals, description, latest] = await Promise.all([
