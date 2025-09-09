@@ -22,6 +22,21 @@ app.use('/api/items', itemsRouter);
 app.use('/api/stats', statsRouter);
 
 /**
+ * @desc     Get Chainlink feed contract helper
+ * @param    {ethers.JsonRpcProvider} provider - JSON RPC provider
+ * @param    {string} feedAddress - Chainlink feed address
+ * @returns  {ethers.Contract} - Chainlink feed contract
+ */
+function getChainlinkFeedContract(provider, feedAddress) {
+    const feedAbi = [
+        'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
+        'function decimals() view returns (uint8)',
+        'function description() view returns (string)'
+    ];
+    return new ethers.Contract(feedAddress, feedAbi, provider);
+}
+
+/**
  * @route    GET /api/DanyilApiTest
  * @desc     Fetch Chainlink ETH/USD price from mainnet AggregatorV3
  * @author   Danyil Sas
@@ -51,18 +66,11 @@ app.use('/api/stats', statsRouter);
  * }
  */
 app.get('/api/DanyilApiTest', async (req, res) => {
-    // consts
-    const rpcUrl = process.env.RPC_URL || 'https://ethereum.publicnode.com';
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
     // Chainlink ETH/USD AggregatorV3 on Ethereum mainnet
     const feedAddress = '0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419';
-    const feedAbi = [
-        'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
-        'function decimals() view returns (uint8)',
-        'function description() view returns (string)'
-    ];
+    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum.publicnode.com');
     try {
-        const feed = new ethers.Contract(feedAddress, feedAbi, provider);
+        const feed = getChainlinkFeedContract(provider, feedAddress);
         const [decimals, description, latest] = await Promise.all([
             feed.decimals(),
             feed.description(),
@@ -90,7 +98,7 @@ app.get('/api/DanyilApiTest', async (req, res) => {
         const isNetworkIssue = code === 'NETWORK_ERROR' || message.toLowerCase().includes('network');
         const status = isNetworkIssue ? 502 : 500;
         console.error('[DanyilApiTest] Error fetching feed data:', { code, message, rpcUrl, contract: feedAddress });
-        return res.status(status).json({ ok: false, error: message, details: { code, contract: feedAddress, rpcUrl } });
+        return res.status(status).json({ ok: false, error: message, details: { code, contract: feedAddress } });
     }
 });
 
