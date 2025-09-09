@@ -52,7 +52,7 @@ app.use('/api/stats', statsRouter);
  */
 app.get('/api/DanyilApiTest', async (req, res) => {
     // consts
-    const rpcUrl = 'https://ethereum.publicnode.com';
+    const rpcUrl = process.env.RPC_URL || 'https://ethereum.publicnode.com';
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     // Chainlink ETH/USD AggregatorV3 on Ethereum mainnet
     const feedAddress = '0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419';
